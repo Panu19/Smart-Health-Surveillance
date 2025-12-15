@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoHealth Watch - Smart Surveillance</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js for Dashboard -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* Custom styles for things Tailwind doesn't cover easily */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .hidden-view { display: none; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        /* Map placeholder pattern */
+        .bg-pattern {
+            background-color: #f3f4f6;
+            background-image: radial-gradient(#d1d5db 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- NAVIGATION -->
+    <nav class="bg-blue-700 text-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <div class="flex items-center space-x-2 cursor-pointer" onclick="app.router('home')">
+                    <i class="fa-solid fa-heart-pulse text-2xl text-blue-300"></i>
+                    <span class="font-bold text-xl tracking-wide" data-i18n="title">EcoHealth Watch</span>
+                </div>
+
+                <!-- Desktop Menu -->
+                <div class="hidden md:flex items-center space-x-6">
+                    <button onclick="app.router('home')" class="hover:text-blue-200 transition" data-i18n="nav_home">Home</button>
+                    <button onclick="app.router('awareness')" class="hover:text-blue-200 transition" data-i18n="nav_awareness">Awareness</button>
+                    <button onclick="app.router('alerts')" class="hover:text-blue-200 transition" data-i18n="nav_alerts">Alerts</button>
+                    
+                    <!-- Role Based Links -->
+                    <div id="nav-auth-links" class="flex space-x-4 hidden">
+                        <button onclick="app.router('report-health')" class="hover:text-blue-200 transition"><i class="fa-solid fa-notes-medical"></i> <span data-i18n="nav_report_health">Health</span></button>
+                        <button onclick="app.router('report-water')" class="hover:text-blue-200 transition"><i class="fa-solid fa-faucet-drip"></i> <span data-i18n="nav_report_water">Water</span></button>
+                        <button id="nav-dashboard-link" onclick="app.router('dashboard')" class="hidden hover:text-blue-200 transition"><i class="fa-solid fa-chart-line"></i> <span data-i18n="nav_dashboard">Dashboard</span></button>
+                        <div class="border-l border-blue-500 h-6 mx-2"></div>
+                        <span id="user-display-name" class="font-semibold text-blue-200"></span>
+                        <button onclick="app.logout()" class="bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-sm transition" data-i18n="nav_logout">Logout</button>
+                    </div>
+
+                    <!-- Public Auth Links -->
+                    <div id="nav-public-links" class="flex space-x-2">
+                        <button onclick="app.toggleLanguage()" class="px-3 py-1 border border-blue-400 rounded hover:bg-blue-600 transition text-sm">
+                            <i class="fa-solid fa-globe"></i> <span id="lang-indicator">EN</span>
+                        </button>
+                        <button onclick="app.router('login')" class="bg-white text-blue-700 px-4 py-1 rounded font-semibold hover:bg-blue-50 transition" data-i18n="nav_login">Login</button>
+                    </div>
+                </div>
+
+                <!-- Mobile Menu Button -->
+                <button class="md:hidden text-2xl" onclick="document.getElementById('mobile-menu').classList.toggle('hidden')">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+            </div>
+        </div>
+        <!-- Mobile Menu Dropdown -->
+        <div id="mobile-menu" class="hidden md:hidden bg-blue-800 pb-4 px-4">
+            <div class="flex flex-col space-y-3 mt-2">
+                <button onclick="app.router('home')" class="text-left text-white">Home</button>
+                <button onclick="app.router('awareness')" class="text-left text-white">Awareness</button>
+                <button onclick="app.router('login')" class="text-left bg-blue-600 p-2 rounded text-white">Login / Register</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-grow container mx-auto px-4 py-6 relative">
+        
+        <!-- === VIEW: HOME === -->
+        <div id="view-home" class="view-section fade-in">
+            <!-- Hero Section -->
+            <div class="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-8 md:p-12 text-white shadow-xl mb-10">
+                <div class="md:w-2/3">
+                    <h1 class="text-4xl md:text-5xl font-bold mb-4" data-i18n="hero_title">Smart Health Surveillance</h1>
+                    <p class="text-xl text-blue-100 mb-8" data-i18n="hero_subtitle">Empowering communities in the Northeastern Region with early disease detection, safe water monitoring, and real-time alerts.</p>
+                    <div class="flex flex-wrap gap-4">
+                        <button onclick="app.router('login')" class="bg-white text-blue-700 px-6 py-3 rounded-lg font-bold shadow hover:bg-blue-50 transition flex items-center">
+                            <i class="fa-solid fa-file-medical mr-2"></i> <span data-i18n="cta_report">Report Case</span>
+                        </button>
+                        <button onclick="app.router('dashboard')" class="bg-blue-500 bg-opacity-30 border border-white text-white px-6 py-3 rounded-lg font-bold hover:bg-opacity-50 transition flex items-center">
+                            <i class="fa-solid fa-chart-pie mr-2"></i> <span data-i18n="cta_dashboard">View Data</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features Grid -->
+            <div class="grid md:grid-cols-3 gap-6 mb-12">
+                <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition border-l-4 border-blue-500">
+                    <div class="text-blue-500 text-3xl mb-4"><i class="fa-solid fa-virus-covid"></i></div>
+                    <h3 class="text-xl font-bold mb-2" data-i18n="feat_1_title">Early Detection</h3>
+                    <p class="text-gray-600" data-i18n="feat_1_desc">AI-driven analysis of symptoms to predict outbreaks before they spread.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition border-l-4 border-cyan-500">
+                    <div class="text-cyan-500 text-3xl mb-4"><i class="fa-solid fa-water"></i></div>
+                    <h3 class="text-xl font-bold mb-2" data-i18n="feat_2_title">Water Quality</h3>
+                    <p class="text-gray-600" data-i18n="feat_2_desc">Monitor pH and turbidity levels in local water sources (Wells, Rivers, Taps).</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition border-l-4 border-yellow-500">
+                    <div class="text-yellow-500 text-3xl mb-4"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <h3 class="text-xl font-bold mb-2" data-i18n="feat_3_title">Real-time Alerts</h3>
+                    <p class="text-gray-600" data-i18n="feat_3_desc">Instant SMS and App notifications for high-risk zones and contamination.</p>
+                </div>
+            </div>
+            
+            <!-- Impact Section -->
+            <div class="bg-white rounded-xl shadow p-8 mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4" data-i18n="impact_title">Impact in Northeastern Region</h2>
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    <div>
+                        <p class="text-gray-600 mb-4 leading-relaxed">
+                            Our system bridges the gap in remote healthcare by allowing **ASHA workers** and community members to report data offline. The data syncs automatically when connectivity is restored, ensuring no village is left behind.
+                        </p>
+                        <ul class="space-y-2">
+                            <li class="flex items-center text-gray-700"><i class="fa-solid fa-check text-green-500 mr-2"></i> Low-bandwidth optimized</li>
+                            <li class="flex items-center text-gray-700"><i class="fa-solid fa-check text-green-500 mr-2"></i> Offline storage capability</li>
+                            <li class="flex items-center text-gray-700"><i class="fa-solid fa-check text-green-500 mr-2"></i> Local language support</li>
+                        </ul>
+                    </div>
+                    <div class="bg-pattern h-48 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
+                        <span class="text-gray-400 font-semibold">Map Visualization Placeholder</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- === VIEW: LOGIN / REGISTER === -->
+        <div id="view-login" class="view-section hidden-view max-w-md mx-auto fade-in mt-10">
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                <div class="flex border-b">
+                    <button id="tab-login" class="w-1/2 py-4 font-bold text-blue-600 border-b-2 border-blue-600 bg-blue-50" onclick="app.toggleAuthTab('login')">Login</button>
+                    <button id="tab-register" class="w-1/2 py-4 font-bold text-gray-500 hover:text-blue-500" onclick="app.toggleAuthTab('register')">Register</button>
+                </div>
+                
+                <div class="p-8">
+                    <!-- Login Form -->
+                    <form id="form-login" onsubmit="event.preventDefault(); app.handleLogin();">
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Email / Phone</label>
+                            <input type="text" id="login-id" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                        <div class="mb-6">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Password</label>
+                            <input type="password" id="login-pass" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition">Sign In</button>
+                        <p class="text-xs text-center text-gray-500 mt-4">Demo Admin: admin / admin</p>
+                    </form>
+
+                    <!-- Register Form -->
+                    <form id="form-register" class="hidden" onsubmit="event.preventDefault(); app.handleRegister();">
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Full Name</label>
+                            <input type="text" id="reg-name" class="w-full px-3 py-2 border rounded-lg" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Role</label>
+                            <select id="reg-role" class="w-full px-3 py-2 border rounded-lg bg-white">
+                                <option value="Community Member">Community Member</option>
+                                <option value="ASHA Worker">ASHA Worker</option>
+                                <option value="Health Official">Health Official (Admin)</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">User ID (Email/Phone)</label>
+                            <input type="text" id="reg-id" class="w-full px-3 py-2 border rounded-lg" required>
+                        </div>
+                        <div class="mb-6">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Password</label>
+                            <input type="password" id="reg-pass" class="w-full px-3 py-2 border rounded-lg" required>
+                        </div>
+                        <button type="submit" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition">Create Account</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- === VIEW: HEALTH REPORTING === -->
+        <div id="view-report-health" class="view-section hidden-view fade-in max-w-2xl mx-auto">
+            <h2 class="text-2xl font-bold mb-6 text-blue-800 flex items-center">
+                <i class="fa-solid fa-notes-medical mr-3"></i> Report Health Case
+            </h2>
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <form onsubmit="event.preventDefault(); app.submitHealthReport();">
+                    
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-bold mb-1">Patient Age</label>
+                            <input type="number" id="h-age" class="w-full border p-2 rounded" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold mb-1">Gender</label>
+                            <select id="h-gender" class="w-full border p-2 rounded">
+                                <option>Male</option>
+                                <option>Female</option>
+                                <option>Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold mb-1">Location (District/Village)</label>
+                        <select id="h-location" class="w-full border p-2 rounded">
+                            <option>Guwahati</option>
+                            <option>Shillong</option>
+                            <option>Imphal</option>
+                            <option>Kohima</option>
+                            <option>Itanagar</option>
+                            <option>Aizawl</option>
+                            <option>Agartala</option>
+                            <option>Gangtok</option>
+                            <option>Remote Village A</option>
+                            <option>Remote Village B</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold mb-2">Symptoms (Select all that apply)</label>
+                        <div class="grid grid-cols-2 gap-2 bg-gray-50 p-4 rounded border">
+                            <label class="flex items-center space-x-2"><input type="checkbox" value="Fever" class="h-4 w-4 h-symptom"> <span>Fever</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" value="Diarrhea" class="h-4 w-4 h-symptom"> <span>Diarrhea</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" value="Vomiting" class="h-4 w-4 h-symptom"> <span>Vomiting</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" value="Jaundice" class="h-4 w-4 h-symptom"> <span>Jaundice</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" value="Skin Rash" class="h-4 w-4 h-symptom"> <span>Skin Rash</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" value="Stomach Pain" class="h-4 w-4 h-symptom"> <span>Stomach Pain</span></label>
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block text-sm font-bold mb-1">Water Source Used</label>
+                        <select id="h-source" class="w-full border p-2 rounded">
+                            <option>Tap Water</option>
+                            <option>Community Well</option>
+                            <option>River/Stream</option>
+                            <option>Hand Pump</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 rounded hover:bg-blue-700">Submit Report</button>
+                    <p class="text-xs text-gray-500 mt-2 text-center">* Data will be stored locally if offline.</p>
+                </form>
+            </div>
+        </div>
+
+        <!-- === VIEW: WATER REPORTING === -->
+        <div id="view-report-water" class="view-section hidden-view fade-in max-w-2xl mx-auto">
+            <h2 class="text-2xl font-bold mb-6 text-cyan-800 flex items-center">
+                <i class="fa-solid fa-faucet-drip mr-3"></i> Report Water Quality
+            </h2>
+            <div class="bg-white p-6 rounded-xl shadow-lg border-t-4 border-cyan-500">
+                <form onsubmit="event.preventDefault(); app.submitWaterReport();">
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold mb-1">Source Location</label>
+                        <select id="w-location" class="w-full border p-2 rounded" required>
+                            <option>Guwahati - Sector 1</option>
+                            <option>Shillong - Main River</option>
+                            <option>Remote Village A - Well</option>
+                            <option>Remote Village B - Pump</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-bold mb-1">pH Level (0-14)</label>
+                            <input type="number" step="0.1" id="w-ph" class="w-full border p-2 rounded" placeholder="7.0" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold mb-1">Turbidity (NTU)</label>
+                            <input type="number" id="w-turbidity" class="w-full border p-2 rounded" placeholder="5" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold mb-1">Physical Characteristics</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <select id="w-color" class="w-full border p-2 rounded">
+                                <option value="Clear">Clear</option>
+                                <option value="Yellowish">Yellowish</option>
+                                <option value="Muddy">Muddy</option>
+                            </select>
+                            <select id="w-odor" class="w-full border p-2 rounded">
+                                <option value="None">No Odor</option>
+                                <option value="Sulphur">Sulphur/Rotten Egg</option>
+                                <option value="Chlorine">Chlorine</option>
+                                <option value="Earthy">Earthy</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-6 border-2 border-dashed border-gray-300 rounded p-4 text-center cursor-pointer hover:bg-gray-50">
+                        <i class="fa-solid fa-camera text-gray-400 text-2xl mb-2"></i>
+                        <p class="text-sm text-gray-500">Upload Image of Water Source (Optional)</p>
+                        <input type="file" class="hidden">
+                    </div>
+
+                    <button type="submit" class="w-full bg-cyan-600 text-white font-bold py-3 rounded hover:bg-cyan-700">Submit Water Report</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- === VIEW: ALERTS === -->
+        <div id="view-alerts" class="view-section hidden-view fade-in">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Active Health Alerts</h2>
+            
+            <div id="alerts-container" class="grid gap-4">
+                <!-- Alerts are injected here via JS -->
+                <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded shadow">
+                    <div class="flex items-start">
+                        <i class="fa-solid fa-triangle-exclamation text-yellow-500 mt-1 mr-3"></i>
+                        <div>
+                            <h3 class="font-bold text-yellow-800">Moderate Contamination Risk</h3>
+                            <p class="text-sm text-yellow-700">High turbidity reported in Remote Village A well. Boil water before use.</p>
+                            <span class="text-xs text-gray-500 mt-2 block">Source: IoT Sensor #402 • 2 hours ago</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- === VIEW: AWARENESS === -->
+        <div id="view-awareness" class="view-section hidden-view fade-in">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Community Awareness</h2>
+            
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Video Cards (Simulated) -->
+                <div class="bg-black h-64 rounded-xl flex items-center justify-center relative group cursor-pointer">
+                    <img src="https://placehold.co/600x400/2563eb/white?text=Hygiene+Video" class="absolute inset-0 w-full h-full object-cover opacity-50 rounded-xl">
+                    <i class="fa-solid fa-play-circle text-6xl text-white opacity-80 group-hover:opacity-100 transition"></i>
+                    <span class="absolute bottom-4 left-4 text-white font-bold">Proper Handwashing Technique</span>
+                </div>
+                
+                <div class="bg-black h-64 rounded-xl flex items-center justify-center relative group cursor-pointer">
+                    <img src="https://placehold.co/600x400/0891b2/white?text=Water+Safety" class="absolute inset-0 w-full h-full object-cover opacity-50 rounded-xl">
+                    <i class="fa-solid fa-play-circle text-6xl text-white opacity-80 group-hover:opacity-100 transition"></i>
+                    <span class="absolute bottom-4 left-4 text-white font-bold">Boiling Water Correctly</span>
+                </div>
+            </div>
+
+            <div class="mt-8 grid md:grid-cols-3 gap-6">
+                <div class="bg-blue-50 p-6 rounded-lg">
+                    <h3 class="font-bold text-blue-800 mb-2"><i class="fa-solid fa-hands-bubbles"></i> Hygiene Tips</h3>
+                    <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                        <li>Wash hands for 20 seconds with soap.</li>
+                        <li>Clean water containers weekly.</li>
+                        <li>Keep surroundings dry to prevent mosquitoes.</li>
+                    </ul>
+                </div>
+                <div class="bg-green-50 p-6 rounded-lg">
+                    <h3 class="font-bold text-green-800 mb-2"><i class="fa-solid fa-shield-virus"></i> Prevention</h3>
+                    <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                        <li>Drink only filtered or boiled water.</li>
+                        <li>Report fever symptoms immediately.</li>
+                        <li>Use mosquito nets at night.</li>
+                    </ul>
+                </div>
+                 <div class="bg-purple-50 p-6 rounded-lg">
+                    <h3 class="font-bold text-purple-800 mb-2"><i class="fa-solid fa-phone"></i> Emergency</h3>
+                    <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                        <li>Ambulance: 108</li>
+                        <li>Health Helpline: 104</li>
+                        <li>Nearest ASHA: Smt. Devi (9876543210)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- === VIEW: DASHBOARD (ADMIN) === -->
+        <div id="view-dashboard" class="view-section hidden-view fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">Health Dept. Dashboard</h2>
+                <div class="flex space-x-2">
+                    <button class="bg-white border px-3 py-1 rounded text-sm hover:bg-gray-50">Export Data</button>
+                    <button class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">Allocate Resources</button>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white p-4 rounded-lg shadow border-t-4 border-red-500">
+                    <p class="text-gray-500 text-xs uppercase font-bold">Active Cases</p>
+                    <h3 class="text-3xl font-bold text-gray-800" id="stat-active">142</h3>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow border-t-4 border-orange-500">
+                    <p class="text-gray-500 text-xs uppercase font-bold">High Risk Zones</p>
+                    <h3 class="text-3xl font-bold text-gray-800" id="stat-risk">3</h3>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow border-t-4 border-blue-500">
+                    <p class="text-gray-500 text-xs uppercase font-bold">Reports Today</p>
+                    <h3 class="text-3xl font-bold text-gray-800" id="stat-today">18</h3>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow border-t-4 border-green-500">
+                    <p class="text-gray-500 text-xs uppercase font-bold">Water Quality</p>
+                    <h3 class="text-3xl font-bold text-gray-800" id="stat-water">87%</h3>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="grid md:grid-cols-2 gap-6 mb-8">
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <h3 class="font-bold mb-4 text-sm text-gray-600">Disease Outbreak Trend (Weekly)</h3>
+                    <canvas id="chart-trends"></canvas>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <h3 class="font-bold mb-4 text-sm text-gray-600">Contamination Sources</h3>
+                    <canvas id="chart-sources"></canvas>
+                </div>
+            </div>
+
+            <!-- Recent Table -->
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <div class="px-6 py-4 border-b">
+                    <h3 class="font-bold text-gray-800">Recent Incident Reports</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-gray-500">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3">Location</th>
+                                <th class="px-6 py-3">Type</th>
+                                <th class="px-6 py-3">Severity/Value</th>
+                                <th class="px-6 py-3">Date</th>
+                                <th class="px-6 py-3">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboard-table-body">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-gray-800 text-gray-400 py-6 text-center mt-auto">
+        <p class="text-sm">© 2025 Smart Health Surveillance System. Northeastern Region Pilot Project.</p>
+    </footer>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- DATA & STATE MANAGEMENT ---
+        const app = {
+            state: {
+                currentUser: null,
+                language: 'en',
+                data: {
+                    users: [],
+                    healthReports: [],
+                    waterReports: [],
+                    alerts: []
+                }
+            },
+
+            // --- INITIALIZATION ---
+            init: function() {
+                this.loadFromStorage();
+                this.setupMockDataIfEmpty();
+                this.updateUI();
+                
+                // If user is already "logged in" via storage persistence (optional, for now we reset on reload for security demo)
+                // In a real app we'd check session token.
+                
+                this.router('home');
+            },
+
+            loadFromStorage: function() {
+                const storedData = localStorage.getItem('ecoHealthData');
+                if (storedData) {
+                    this.state.data = JSON.parse(storedData);
+                }
+            },
+
+            saveToStorage: function() {
+                localStorage.setItem('ecoHealthData', JSON.stringify(this.state.data));
+                this.updateDashboard(); // Refresh dash on save
+            },
+
+            setupMockDataIfEmpty: function() {
+                if (this.state.data.users.length === 0) {
+                    // Seed initial data
+                    this.state.data.users.push({ id: 'admin', pass: 'admin', name: 'Dr. Sharma', role: 'Health Official' });
+                    this.state.data.users.push({ id: 'asha', pass: 'asha', name: 'Meera Devi', role: 'ASHA Worker' });
+                    
+                    // Seed some reports for dashboard visualization
+                    this.state.data.healthReports.push({
+                        id: 1, location: 'Remote Village A', symptoms: ['Fever', 'Vomiting'], age: 12, date: new Date().toISOString(), severity: 'High'
+                    });
+                     this.state.data.healthReports.push({
+                        id: 2, location: 'Remote Village A', symptoms: ['Diarrhea'], age: 45, date: new Date().toISOString(), severity: 'Medium'
+                    });
+                    
+                    this.state.data.alerts.push({
+                        level: 'red', message: 'Disease Cluster detected in Remote Village A', location: 'Remote Village A', date: new Date().toISOString()
+                    });
+                    
+                    this.saveToStorage();
+                }
+            },
+
+            // --- ROUTING ---
+            router: function(viewName) {
+                // Hide all views
+                document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden-view'));
+                
+                // Show requested view
+                const target = document.getElementById(`view-${viewName}`);
+                if (target) {
+                    target.classList.remove('hidden-view');
+                    window.scrollTo(0, 0);
+                }
+
+                // If dashboard is requested, render charts
+                if (viewName === 'dashboard') {
+                    this.renderCharts();
+                    this.updateDashboardTable();
+                }
+                
+                // If alerts requested, refresh alerts
+                if (viewName === 'alerts') {
+                    this.renderAlerts();
+                }
+            },
+
+            // --- AUTHENTICATION ---
+            toggleAuthTab: function(tab) {
+                if(tab === 'login') {
+                    document.getElementById('form-login').classList.remove('hidden');
+                    document.getElementById('form-register').classList.add('hidden');
+                    document.getElementById('tab-login').classList.add('text-blue-600', 'border-b-2', 'bg-blue-50');
+                    document.getElementById('tab-register').classList.remove('text-blue-600', 'border-b-2', 'bg-blue-50');
+                } else {
+                    document.getElementById('form-login').classList.add('hidden');
+                    document.getElementById('form-register').classList.remove('hidden');
+                    document.getElementById('tab-register').classList.add('text-blue-600', 'border-b-2', 'bg-blue-50');
+                    document.getElementById('tab-login').classList.remove('text-blue-600', 'border-b-2', 'bg-blue-50');
+                }
+            },
+
+            handleLogin: function() {
+                const id = document.getElementById('login-id').value;
+                const pass = document.getElementById('login-pass').value;
+                
+                const user = this.state.data.users.find(u => u.id === id && u.pass === pass);
+                
+                if (user) {
+                    this.state.currentUser = user;
+                    this.updateUI();
+                    this.router('dashboard'); // Redirect to dashboard on login
+                } else {
+                    alert('Invalid credentials. Try "admin" / "admin"');
+                }
+            },
+
+            handleRegister: function() {
+                const name = document.getElementById('reg-name').value;
+                const role = document.getElementById('reg-role').value;
+                const id = document.getElementById('reg-id').value;
+                const pass = document.getElementById('reg-pass').value;
+                
+                this.state.data.users.push({ id, pass, name, role });
+                this.saveToStorage();
+                alert('Registration successful! Please log in.');
+                this.toggleAuthTab('login');
+            },
+
+            logout: function() {
+                this.state.currentUser = null;
+                this.updateUI();
+                this.router('home');
+            },
+
+            updateUI: function() {
+                const user = this.state.currentUser;
+                const authLinks = document.getElementById('nav-auth-links');
+                const publicLinks = document.getElementById('nav-public-links');
+                
+                if (user) {
+                    authLinks.classList.remove('hidden');
+                    publicLinks.classList.add('hidden');
+                    document.getElementById('user-display-name').innerText = user.name;
+                    
+                    // Show dashboard link only for Admin/Officials
+                    if (user.role === 'Health Official') {
+                        document.getElementById('nav-dashboard-link').classList.remove('hidden');
+                    } else {
+                        document.getElementById('nav-dashboard-link').classList.add('hidden');
+                    }
+                } else {
+                    authLinks.classList.add('hidden');
+                    publicLinks.classList.remove('hidden');
+                }
+            },
+
+            // --- DASHBOARD UPDATE LOGIC (Fixed) ---
+            updateDashboard: function() {
+                 // Check if dashboard is currently visible to avoid overhead/errors
+                 const dashboard = document.getElementById('view-dashboard');
+                 if (dashboard && !dashboard.classList.contains('hidden-view')) {
+                     this.renderCharts();
+                     this.updateDashboardTable();
+                 }
+            },
+
+            // --- CORE FUNCTIONALITY: REPORTS ---
+            submitHealthReport: function() {
+                const location = document.getElementById('h-location').value;
+                const checkboxes = document.querySelectorAll('.h-symptom:checked');
+                const symptoms = Array.from(checkboxes).map(cb => cb.value);
+                
+                if (symptoms.length === 0) {
+                    alert('Please select at least one symptom.');
+                    return;
+                }
+
+                const report = {
+                    id: Date.now(),
+                    type: 'Health',
+                    location: location,
+                    age: document.getElementById('h-age').value,
+                    gender: document.getElementById('h-gender').value,
+                    symptoms: symptoms,
+                    date: new Date().toISOString(),
+                    user: this.state.currentUser ? this.state.currentUser.name : 'Anonymous'
+                };
+
+                this.state.data.healthReports.unshift(report); // Add to top
+                
+                // AI/Logic: Check for outbreak
+                this.checkForOutbreak(location);
+                
+                this.saveToStorage();
+                alert('Report Submitted Successfully. Thank you for helping the community.');
+                this.router('home');
+                document.querySelector('form').reset();
+            },
+
+            submitWaterReport: function() {
+                const ph = parseFloat(document.getElementById('w-ph').value);
+                const turbidity = parseFloat(document.getElementById('w-turbidity').value);
+                const location = document.getElementById('w-location').value;
+
+                let status = 'Safe';
+                if (ph < 6.5 || ph > 8.5 || turbidity > 5) status = 'Contaminated';
+
+                const report = {
+                    id: Date.now(),
+                    type: 'Water',
+                    location: location,
+                    ph: ph,
+                    turbidity: turbidity,
+                    status: status,
+                    date: new Date().toISOString(),
+                    user: this.state.currentUser ? this.state.currentUser.name : 'Anonymous'
+                };
+
+                this.state.data.waterReports.unshift(report);
+                
+                if (status === 'Contaminated') {
+                    this.createAlert('red', `Contaminated Water Detected at ${location} (pH: ${ph}, Turbidity: ${turbidity})`, location);
+                }
+
+                this.saveToStorage();
+                alert(`Water Report Submitted. Status: ${status}`);
+                this.router('home');
+            },
+
+            // --- AI / LOGIC MODULE ---
+            checkForOutbreak: function(location) {
+                // Count recent cases in this location
+                const recentCases = this.state.data.healthReports.filter(r => r.location === location).length;
+                
+                // Simple threshold logic
+                if (recentCases >= 3) {
+                    this.createAlert('red', `High Disease Risk: Multiple cases reported in ${location}.`, location);
+                } else if (recentCases >= 2) {
+                    this.createAlert('yellow', `Warning: Potential outbreak cluster in ${location}.`, location);
+                }
+            },
+
+            createAlert: function(level, message, location) {
+                // Avoid duplicates
+                const exists = this.state.data.alerts.find(a => a.message === message && new Date(a.date).toDateString() === new Date().toDateString());
+                if (!exists) {
+                    this.state.data.alerts.unshift({
+                        level, message, location, date: new Date().toISOString()
+                    });
+                }
+            },
+
+            renderAlerts: function() {
+                const container = document.getElementById('alerts-container');
+                container.innerHTML = '';
+                
+                if(this.state.data.alerts.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center">No active alerts at this time.</p>';
+                    return;
+                }
+
+                this.state.data.alerts.forEach(alert => {
+                    const colorClass = alert.level === 'red' ? 'red' : 'yellow';
+                    const html = `
+                        <div class="bg-${colorClass}-50 border-l-4 border-${colorClass}-500 p-4 rounded shadow mb-3">
+                            <div class="flex items-start">
+                                <i class="fa-solid fa-triangle-exclamation text-${colorClass}-500 mt-1 mr-3"></i>
+                                <div>
+                                    <h3 class="font-bold text-${colorClass}-800 uppercase text-sm">${alert.level} Alert</h3>
+                                    <p class="text-sm text-${colorClass}-900 font-semibold">${alert.message}</p>
+                                    <span class="text-xs text-gray-500 mt-1 block">${new Date(alert.date).toLocaleString()}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    container.innerHTML += html;
+                });
+            },
+
+            // --- DASHBOARD VISUALS ---
+            updateDashboardTable: function() {
+                const tbody = document.getElementById('dashboard-table-body');
+                tbody.innerHTML = '';
+                
+                // Combine reports for the table
+                const allReports = [
+                    ...this.state.data.healthReports.map(r => ({...r, displayVal: r.symptoms.join(', ')})),
+                    ...this.state.data.waterReports.map(r => ({...r, displayVal: `pH: ${r.ph}`}))
+                ].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+
+                allReports.forEach(r => {
+                    const badgeColor = r.type === 'Health' ? 'bg-red-100 text-red-800' : 'bg-cyan-100 text-cyan-800';
+                    tbody.innerHTML += `
+                        <tr class="bg-white border-b hover:bg-gray-50">
+                            <td class="px-6 py-4 font-medium text-gray-900">${r.location}</td>
+                            <td class="px-6 py-4"><span class="${badgeColor} text-xs font-medium px-2.5 py-0.5 rounded">${r.type}</span></td>
+                            <td class="px-6 py-4 truncate max-w-xs">${r.displayVal}</td>
+                            <td class="px-6 py-4">${new Date(r.date).toLocaleDateString()}</td>
+                            <td class="px-6 py-4 text-green-600 font-bold">Logged</td>
+                        </tr>
+                    `;
+                });
+
+                // Update Stats
+                document.getElementById('stat-active').innerText = this.state.data.healthReports.length;
+                document.getElementById('stat-risk').innerText = this.state.data.alerts.length;
+                document.getElementById('stat-today').innerText = allReports.length; // Simplified
+            },
+
+            renderCharts: function() {
+                // Destroy old charts if they exist to prevent overlap
+                if (window.chartTrend) window.chartTrend.destroy();
+                if (window.chartSource) window.chartSource.destroy();
+
+                const ctx1 = document.getElementById('chart-trends').getContext('2d');
+                const ctx2 = document.getElementById('chart-sources').getContext('2d');
+
+                // Trend Chart
+                window.chartTrend = new Chart(ctx1, {
+                    type: 'line',
+                    data: {
+                        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                        datasets: [{
+                            label: 'Reported Cases',
+                            data: [12, 19, 3, 5, 2, 3, this.state.data.healthReports.length],
+                            borderColor: 'rgb(59, 130, 246)',
+                            tension: 0.1
+                        }]
+                    },
+                    options: { responsive: true }
+                });
+
+                // Source Chart
+                window.chartSource = new Chart(ctx2, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Water Contamination', 'Vector Borne', 'Food'],
+                        datasets: [{
+                            data: [this.state.data.waterReports.filter(w => w.status === 'Contaminated').length + 5, 8, 3],
+                            backgroundColor: ['#06b6d4', '#ef4444', '#f59e0b']
+                        }]
+                    },
+                    options: { responsive: true }
+                });
+            },
+
+            // --- LOCALIZATION MOCK ---
+            toggleLanguage: function() {
+                this.state.language = this.state.language === 'en' ? 'local' : 'en';
+                document.getElementById('lang-indicator').innerText = this.state.language.toUpperCase();
+                
+                const dict = {
+                    en: {
+                        title: "EcoHealth Watch",
+                        nav_home: "Home",
+                        hero_title: "Smart Health Surveillance",
+                        cta_report: "Report Case"
+                    },
+                    local: {
+                        title: "इकोहेल्थ वॉच",
+                        nav_home: "होम",
+                        hero_title: "स्मार्ट स्वास्थ्य निगरानी",
+                        cta_report: "रिपोर्ट करें"
+                    }
+                };
+
+                const langData = dict[this.state.language];
+                document.querySelectorAll('[data-i18n]').forEach(el => {
+                    const key = el.getAttribute('data-i18n');
+                    if (langData[key]) el.innerText = langData[key];
+                });
+            }
+        };
+
+        // Initialize App
+        window.onload = function() {
+            app.init();
+        };
+
+    </script>
+</body>
+</html>
